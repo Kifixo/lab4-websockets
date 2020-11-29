@@ -5,7 +5,6 @@ import org.glassfish.tyrus.client.ClientManager;
 import org.glassfish.tyrus.server.Server;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import websockets.web.ElizaServerEndpoint;
 
@@ -14,13 +13,18 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
 
 import static java.lang.String.*;
+import static java.util.concurrent.CompletableFuture.anyOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ElizaServerTest {
 
@@ -56,14 +60,18 @@ public class ElizaServerTest {
 	}
 
 	@Test(timeout = 1000)
-	@Ignore
 	public void onChat() throws DeploymentException, IOException, URISyntaxException, InterruptedException {
-		// COMPLETE ME!!
 		List<String> list = new ArrayList<>();
 		ClientEndpointConfig configuration = ClientEndpointConfig.Builder.create().build();
 		ClientManager client = ClientManager.createClient();
-		client.connectToServer(new ElizaEndpointToComplete(list), configuration, new URI("ws://localhost:8025/websockets/eliza"));
-		// COMPLETE ME!!
+		client.connectToServer(new ElizaEndpoint(list), configuration, new URI("ws://localhost:8025/websockets/eliza"));
+
+		Thread.sleep(200);
+		assertEquals(9, list.size());
+        String expectedFamilyResponses[] = {"Tell me more about your family.","How do you get along with your family?", "Is your family important to you?"};
+		assertTrue(Arrays.asList(expectedFamilyResponses).contains(list.get(3)));
+        assertEquals("You don't seem very certain.", list.get(5));
+        assertEquals("We were discussing you, not me.", list.get(7));
 	}
 
 	@After
@@ -89,29 +97,34 @@ public class ElizaServerTest {
         }
     }
 
-    private static class ElizaEndpointToComplete extends Endpoint {
+    private static class ElizaEndpoint extends Endpoint {
 
         private final List<String> list;
 
-        ElizaEndpointToComplete(List<String> list) {
+        ElizaEndpoint(List<String> list) {
             this.list = list;
         }
 
         @Override
         public void onOpen(Session session, EndpointConfig config) {
-
-            // COMPLETE ME!!!
-
+            try {
+                session.getAsyncRemote().sendText("My wife has gone");
+                Thread.sleep(10);
+                session.getAsyncRemote().sendText("Maybe I should do extra job");
+                Thread.sleep(10);
+                session.getAsyncRemote().sendText("Hey, you");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             session.addMessageHandler(new ElizaMessageHandlerToComplete());
         }
 
         private class ElizaMessageHandlerToComplete implements MessageHandler.Whole<String> {
-
             @Override
             public void onMessage(String message) {
                 list.add(message);
-                // COMPLETE ME!!!
             }
         }
     }
 }
+
